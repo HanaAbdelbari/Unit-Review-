@@ -1,0 +1,25 @@
+{
+  "name": "Projects API Environment",
+  "values": [
+    {
+      "key": "baseUrl",
+      "value": "http://reviews:3000",
+      "enabled": true
+    },
+    {
+      "key": "host",
+      "value": "reviews",
+      "enabled": true
+    },
+    {
+      "key": "port",
+      "value": "3000",
+      "enabled": true
+    },
+    {
+      "key": "rabbitMQpasswordBase64Encoded",
+      "value": "Z3Vlc3Q6Z3Vlc3Q=",
+      "enabled": true
+    }
+  ]
+}

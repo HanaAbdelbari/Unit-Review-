@@ -1,0 +1,30 @@
+<div class="review-form-container">
+    <h2>Create Review</h2>
+    
+    <form [formGroup]="reviewForm" (ngSubmit)="onSubmit()">
+      <mat-form-field>
+        <input matInput formControlName="serviceId" placeholder="Service ID">
+        <mat-error *ngIf="reviewForm.get('serviceId')?.errors?.['required']">
+          Service ID is required
+        </mat-error>
+      </mat-form-field>
+  
+      <mat-form-field>
+        <input matInput formControlName="clientId" placeholder="Client ID">
+        <mat-error *ngIf="reviewForm.get('clientId')?.errors?.['required']">
+          Client ID is required
+        </mat-error>
+      </mat-form-field>
+  
+      <mat-form-field>
+        <input matInput formControlName="reviewType" placeholder="Review Type">
+        <mat-error *ngIf="reviewForm.get('reviewType')?.errors?.['required']">
+          Review Type is required
+        </mat-error>
+      </mat-form-field>
+  
+      <button mat-raised-button color="primary" type="submit" [disabled]="!reviewForm.valid">
+        Submit Review
+      </button>
+    </form>
+  </div>

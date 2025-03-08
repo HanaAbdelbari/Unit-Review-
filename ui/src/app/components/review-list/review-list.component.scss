@@ -1,0 +1,24 @@
+.reviews-container {
+  padding: 20px;
+
+  .filters {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+
+    mat-form-field {
+      min-width: 200px;
+    }
+  }
+
+  .reviews-list {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+
+    .review-card {
+      margin-bottom: 16px;
+    }
+  }
+}

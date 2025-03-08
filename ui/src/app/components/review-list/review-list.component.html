@@ -1,0 +1,32 @@
+<div class="reviews-container">
+    <h2>Reviews</h2>
+    
+    <!-- Filters -->
+    <div class="filters">
+      <mat-form-field>
+        <input matInput [(ngModel)]="filters.serviceId" placeholder="Service ID">
+      </mat-form-field>
+      <mat-form-field>
+        <input matInput [(ngModel)]="filters.clientId" placeholder="Client ID">
+      </mat-form-field>
+      <mat-form-field>
+        <input matInput [(ngModel)]="filters.reviewType" placeholder="Review Type">
+      </mat-form-field>
+      <button mat-raised-button color="primary" (click)="applyFilters()">Apply Filters</button>
+    </div>
+  
+    <!-- Reviews List -->
+    <div class="reviews-list">
+      <mat-card *ngFor="let review of reviews" class="review-card">
+        <mat-card-header>
+          <mat-card-title>Review for Service {{review.serviceId}}</mat-card-title>
+          <mat-card-subtitle>Type: {{review.reviewType}}</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <p><strong>Service ID:</strong> {{review.serviceId}}</p>
+          <p><strong>Client ID:</strong> {{review.clientId}}</p>
+          <!-- Add other review details -->
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>

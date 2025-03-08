@@ -1,0 +1,32 @@
+{
+  "type": "object",
+  "properties": {
+    "serviceId": {
+      "type": "string"
+    },
+    "clientId": {
+      "type": "string"
+    },
+    "providerId": {
+      "type": "string"
+    },
+    "reviewType": {
+      "type": "string",
+      "enum": ["client", "provider"]
+    },
+    "comment": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "rating": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": ["serviceId", "clientId", "providerId", "reviewType", "comment", "rating"]
+}

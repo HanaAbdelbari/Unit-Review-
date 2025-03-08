@@ -1,0 +1,18 @@
+{
+    "queues": [
+        {
+            "name": "zokhrof.interiordesigner.reviews.q",
+            "durable": true,
+            "vhost": "/"
+        }
+    ],
+    "bindings": [
+        {
+            "source": "zokhrof.requests.dx",
+            "destination": "zokhrof.interiordesigner.reviews.q",
+            "destination_type": "queue",
+            "routing_key": "Zokhrof.Interiordesigner.Projects.AddReview",
+            "vhost": "/"
+        }
+    ]
+}

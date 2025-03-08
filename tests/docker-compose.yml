@@ -1,0 +1,117 @@
+services:
+  reviews-init:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    profiles: ["init"]
+    entrypoint: ["/bin/sh", "/usr/bin/configure.sh"]
+    volumes:
+      - zokhrof_share:/zokhrof
+
+  reviews:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: build
+    profiles: ["main"]
+    ports:
+      - "3000:3000"
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017/reviews
+      - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      - mongo
+      - rabbitmq
+    volumes:
+      - cicd:/cicd
+
+  # New test service
+  reviews-test:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: test
+    profiles: ["main"]
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017/reviews
+      - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      - mongo
+      - rabbitmq
+    volumes:
+      - cicd:/cicd
+
+  mongo:
+    image: mongo:latest
+    profiles: ["main"]
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  rabbitmq:
+    image: docker.io/ahmed000abdullah/interiordesigner-rabbitmqserver:0.0.2054
+    profiles: ["main"]
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - zokhrof_share:/zokhrof
+
+  rabbitmq-init:
+    image: docker.io/ahmed000abdullah/interiordesigner-rabbitmqserver-init:0.0.2054
+    container_name: rabbitmq-init
+    profiles: ["init"]
+    volumes:
+      - zokhrof_share:/zokhrof
+    environment:
+      - RABBITMQ_PASSWORD=guest
+
+  adminer:
+    image: adminer
+    profiles: ["main"]
+    ports:
+      - 8080:8080
+    environment:
+      - ADMINER_DEFAULT_SERVER=mongo
+    depends_on:
+      - mongo
+
+  e2e-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    profiles: ["main"]
+    environment:
+      RABBITMQ_USER: guest
+      RABBITMQ_PASS: guest
+    volumes:
+      - cicd:/cicd
+    depends_on:
+      - reviews
+
+  debugbrowser:
+    image: httpd:alpine
+    profiles: ["main"]
+    command: sh -c "rm -f /usr/local/apache2/htdocs/index.html && httpd-foreground"
+    ports:
+      - 8082:80
+    volumes:
+      - cicd:/usr/local/apache2/htdocs/cicd:ro
+      - zokhrof_share:/usr/local/apache2/htdocs/zokhrof_share:ro
+
+  output-copier:
+    image: alpine
+    profiles: ["output-copier"]
+    volumes:
+      - cicd:/cicd
+      - ../cicd:/local-cicd
+    entrypoint: /bin/sh -c "cp -r /cicd/* /local-cicd/"
+
+volumes:
+  cicd:
+  mongo_data:
+  zokhrof_share:

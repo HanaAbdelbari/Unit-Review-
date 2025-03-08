@@ -1,0 +1,97 @@
+name: "$(Build.DefinitionName)_$(major).$(minor).$(Build.BuildId)"
+
+variables:
+  major: 0
+  minor: 0
+
+resources:
+  repositories:
+  - repository: templates
+    type: git
+    name: DevOps/PipelineTemplates
+    ref: refs/heads/main
+
+stages:
+- stage: ServerBuild
+  condition: false
+  variables:
+    DOCKER_FILE_PATH: docker/Dockerfile
+    DOCKER_BUILD_CONTEXT: .
+  jobs:
+  - job: EndToEndTesting
+    cancelTimeoutInMinutes: 1
+    pool:
+      name: Default
+    steps:
+    - task: Bash@3
+      inputs:
+        targetType: 'inline'
+        script: |
+          set -e
+          
+          docker ps
+          docker images
+          docker volume ls
+          docker ps --format "{{.Names}}" | grep -v "deployment-server-agent" | xargs -r docker stop
+          docker container prune -f
+          docker ps -a
+          docker image prune -a -f
+          docker volume prune -a -f
+          docker network prune -f
+
+          docker-compose --file tests/docker-compose.yml --profile main down -v
+          docker-compose --file tests/docker-compose.yml --profile init down -v
+          docker-compose --file tests/docker-compose.yml --profile init up
+          docker-compose --file tests/docker-compose.yml --profile main up --build --exit-code-from e2e-tests
+          docker-compose --file tests/docker-compose.yml run --rm output-copier
+          ls cicd/e2etest/output/
+          ls cicd/coverage/output/
+      displayName: 'Run E2E Tests'
+
+    - task: PublishTestResults@2
+      condition: succeededOrFailed()
+      inputs:
+        testResultsFormat: 'JUnit'
+        testResultsFiles: 'cicd/e2etest/output/*.xml'
+        testRunTitle: 'Publish test results'
+
+    - task: PublishCodeCoverageResults@1
+      condition: succeededOrFailed()
+      inputs:
+        codeCoverageTool: 'Cobertura'
+        failIfCoverageEmpty: true
+        summaryFileLocation: '$(System.DefaultWorkingDirectory)/cicd/coverage/output/cobertura-coverage.xml'
+        reportDirectory: '$(System.DefaultWorkingDirectory)/cicd/coverage/output'
+  
+  - template: PipelineTemplate-build.yml@templates
+    parameters:
+      JobDependencies: EndToEndTesting
+      ${{ if or(eq(variables['Build.SourceBranchName'], 'main'), startsWith(variables['Build.SourceBranch'], 'refs/heads/release') ) }}:
+        BuildTarget: DockerPush
+      ${{ else }}:
+        BuildTarget: DockerBuild
+
+
+- stage: ClientBuild
+  dependsOn: []
+  variables:
+  - name: DOCKER_FILE_PATH
+    value: clientgenerator/Dockerfile
+  - name: DOCKER_BUILD_CONTEXT
+    value: .
+  - name: CICD_BUILD_TARGET
+    value: ContainerBuild
+
+  - name: DOCKER_BUILD_EXTRA_OPTIONS
+    ${{ if or(eq(variables['Build.SourceBranchName'], 'main'), startsWith(variables['Build.SourceBranch'], 'refs/heads/release')) }}:
+      value: |
+        --build-arg DOCKER_ARG_BUILD_TARGET=NpmPush
+        --build-arg BUILD_CONTEXT=pipeline
+    ${{ else }}:
+      value: |
+        --build-arg DOCKER_ARG_BUILD_TARGET=NpmPush
+        --build-arg BUILD_CONTEXT=pipeline
+
+  jobs:
+  - template: PipelineTemplate-build.yml@templates
+

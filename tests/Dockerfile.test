@@ -1,0 +1,50 @@
+FROM postman/newman:alpine
+
+# Install bash and curl
+RUN apk add --no-cache bash curl jq
+RUN npm install -g newman-reporter-html
+
+
+# Download wait-for-it script
+ADD https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh /usr/local/bin/wait-for-it
+RUN chmod +x /usr/local/bin/wait-for-it
+
+# Set working directory
+WORKDIR /etc/newman
+
+# Copy collections and environment files
+COPY *.json /tmp/
+
+# Extract API host and port from environment.json
+RUN API_URL=$(jq -r '.values[] | select(.key == "baseUrl") | .value' /tmp/environment.json) && \
+    API_HOST=$(echo $API_URL | sed -e 's|^[^/]*//||' -e 's|:.*||') && \
+    API_PORT=$(echo $API_URL | sed -e 's|^.*:||' -e 's|/.*||') && \
+    echo "API_HOST=$API_HOST" > /tmp/api_env && \
+    echo "API_PORT=$API_PORT" >> /tmp/api_env && \
+    echo "export AUTH_HEADER=$(echo -n 'guest:guest' | base64)" >> /tmp/api_env
+
+# Create entrypoint script
+RUN echo '#!/bin/sh' > /usr/local/bin/entrypoint.sh && \
+    echo 'set -e' >> /usr/local/bin/entrypoint.sh && \
+    echo 'sleep 10' >> /usr/local/bin/entrypoint.sh && \
+    echo '. /tmp/api_env' >> /usr/local/bin/entrypoint.sh && \
+    echo 'echo "Waiting for API at $API_HOST:$API_PORT"' >> /usr/local/bin/entrypoint.sh && \
+    echo 'wait-for-it $API_HOST:$API_PORT' >> /usr/local/bin/entrypoint.sh && \
+    echo 'newman run /tmp/create-review-by-restapi.json '\
+           '--environment=/tmp/environment.json '\
+           '--reporters cli,html,junit,json '\
+           '--reporter-junit-export=/cicd/e2etest/output/result-create-review-by-restapi.xml '\
+           '--reporter-html-export=/cicd/e2etest/output/result-create-review-by-restapi.html' \
+           '--reporter-json-export=/cicd/e2etest/output/result-create-review-by-restapi.json' \
+           >> /usr/local/bin/entrypoint.sh && \
+    echo 'newman run /tmp/create-review-by-message.json '\
+            ' --environment=/tmp/environment.json '\
+           '--reporters cli,html,junit,json '\
+           '--reporter-junit-export=/cicd/e2etest/output/result-create-review-by-message.xml' \
+           '--reporter-html-export=/cicd/e2etest/output/result-create-review-by-message.html' \
+           '--reporter-json-export=/cicd/e2etest/output/result-create-review-by-message.json' \
+           >> /usr/local/bin/entrypoint.sh && \
+    chmod +x /usr/local/bin/entrypoint.sh
+
+# Set the entrypoint
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
